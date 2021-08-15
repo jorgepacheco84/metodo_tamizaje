@@ -10,3 +10,5 @@ Farrington (1993) propuso estimar la VE a través del método de tamizaje utiliz
 En este repositorio aplico a este método a los datos entregados recientemente por Ministerio de Salud (https://github.com/MinCiencia/Datos-COVID19/blob/master/output/producto89/incidencia_en_vacunados_edad.csv) obtenido la VE ajustada por edad. 
 
 ATENCIÓN: Esto no debe considerarse la verdadera efectividad de la vacunación debido a que existen factores de confusión no medidos.
+
+Artículo de Farrington (1993): https://academic.oup.com/ije/article-abstract/22/4/742/664122?redirectedFrom=fulltext
