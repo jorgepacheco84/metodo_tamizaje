@@ -1,0 +1,49 @@
+library(readxl)
+ejemplo_screening <- read_excel("GitHub/metodo_tamizaje/ejemplo_screening.xlsx")
+View(ejemplo_screening)
+
+# Crear offset
+ejemplo_screening$o <- with(ejemplo_screening, log(pob_vac / (1 - pob_vac)))
+
+#Definir como variable categórica
+ejemplo_screening$rango_etario <- as.factor(ejemplo_screening$rango_etario)
+
+# Modelo UCI
+m_uci <- glm( cbind(uci_vac, uci_no_vac) ~ offset(o), family=binomial,data=ejemplo_screening)
+VE_uci <- (1-exp(as.numeric(coef(m_uci))))
+VE_uci_ic <- sort(1-exp(confint(m_uci)))
+
+# Modelo UCI estratificado por edad
+m_uci_edad <- glm( cbind(uci_vac, uci_no_vac) ~ offset(o) + rango_etario, family=binomial,data=ejemplo_screening)
+summary(m_uci_edad)
+VE_uci_21_30 <- (1-exp(m_uci_edad[["coefficients"]][["(Intercept)"]] + m_uci_edad[["coefficients"]][["rango_etario21_30"]]))
+VE_uci_31_40 <- (1-exp(m_uci_edad[["coefficients"]][["(Intercept)"]] + m_uci_edad[["coefficients"]][["rango_etario31_40"]]))
+VE_uci_41_50 <- (1-exp(m_uci_edad[["coefficients"]][["(Intercept)"]] + m_uci_edad[["coefficients"]][["rango_etario41_50"]]))
+VE_uci_51_60 <- (1-exp(m_uci_edad[["coefficients"]][["(Intercept)"]] + m_uci_edad[["coefficients"]][["rango_etario51_60"]]))
+VE_uci_61_70 <- (1-exp(m_uci_edad[["coefficients"]][["(Intercept)"]] + m_uci_edad[["coefficients"]][["rango_etario61_70"]]))
+VE_uci_71_80 <- (1-exp(m_uci_edad[["coefficients"]][["(Intercept)"]] + m_uci_edad[["coefficients"]][["rango_etario71_80"]]))
+VE_uci_80_mas <- (1-exp(m_uci_edad[["coefficients"]][["(Intercept)"]] + m_uci_edad[["coefficients"]][["rango_etario80_mas"]]))
+
+# Modelo defunciones
+m_def <- glm( cbind(def_vac, def_no_vac) ~ offset(o), family=binomial,data=ejemplo_screening)
+VE_def <- (1-exp(as.numeric(coef(m_def))))
+VE_def_ic <- sort(1-exp(confint(m_def)))
+
+# Modelo defunciones estratificado por edad
+m_def_edad <- glm( cbind(def_vac, def_no_vac) ~ offset(o) + rango_etario, family=binomial,data=ejemplo_screening)
+summary(m_def_edad)
+VE_def_21_30 <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario21_30"]]))
+VE_def_31_40 <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario31_40"]]))
+VE_def_41_50 <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario41_50"]]))
+VE_def_51_60 <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario51_60"]]))
+VE_def_61_70 <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario61_70"]]))
+VE_def_71_80 <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario71_80"]]))
+VE_def_80_mas <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario80_mas"]]))
+
+# Tabla de VE obtenida según método de tamizaje
+
+tabla_VE <- matrix(c(VE_uci, VE_uci_21_30, VE_uci_31_40, VE_uci_41_50, VE_uci_51_60, VE_uci_61_70, VE_uci_71_80, VE_def, VE_def_21_30, VE_def_31_40, VE_def_41_50, VE_def_51_60, VE_def_61_70, VE_def_71_80), nrow = 7, ncol = 2, byrow = FALSE)
+colnames(tabla_VE) <- c("VE para UCI", "VE para fallecer")
+rownames(tabla_VE) <- c("VE ajustado por edad", "VE para 21 a 30 años", "VE para 31 a 40 años", "VE para 41 a 50 años", "VE para 51 a 60 años", "VE para 61 a 70 años", "VE para 71 a 80 años")
+Efectividad <- as.table(tabla_VE)
+Efectividad
