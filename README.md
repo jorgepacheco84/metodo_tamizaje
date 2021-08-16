@@ -12,3 +12,5 @@ En este repositorio aplico a este método a los datos entregados recientemente p
 ATENCIÓN: Esto no debe considerarse la verdadera efectividad de la vacunación debido a que existen factores de confusión no medidos.
 
 Artículo de Farrington (1993): https://academic.oup.com/ije/article-abstract/22/4/742/664122?redirectedFrom=fulltext
+
+Código original desarrollado por Michael Höhle: https://github.com/hoehleatsu/STA427_SM4IDE/blob/main/Lectures/Lecture05/lecture05-handout.pdf
