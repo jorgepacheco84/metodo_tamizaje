@@ -5,7 +5,7 @@ View(ejemplo_screening)
 # Crear offset
 ejemplo_screening$o <- with(ejemplo_screening, log(pob_vac / (1 - pob_vac)))
 
-#Definir como variable categórica
+#Definir como variable categÃ³rica
 ejemplo_screening$rango_etario <- as.factor(ejemplo_screening$rango_etario)
 
 # Modelo UCI
@@ -40,10 +40,27 @@ VE_def_61_70 <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_eda
 VE_def_71_80 <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario71_80"]]))
 VE_def_80_mas <- (1-exp(m_def_edad[["coefficients"]][["(Intercept)"]] + m_def_edad[["coefficients"]][["rango_etario80_mas"]]))
 
-# Tabla de VE obtenida según método de tamizaje
+# Tabla de VE obtenida segÃºn mÃ©todo de tamizaje
 
 tabla_VE <- matrix(c(VE_uci, VE_uci_21_30, VE_uci_31_40, VE_uci_41_50, VE_uci_51_60, VE_uci_61_70, VE_uci_71_80, VE_def, VE_def_21_30, VE_def_31_40, VE_def_41_50, VE_def_51_60, VE_def_61_70, VE_def_71_80), nrow = 7, ncol = 2, byrow = FALSE)
 colnames(tabla_VE) <- c("VE para UCI", "VE para fallecer")
-rownames(tabla_VE) <- c("VE ajustado por edad", "VE para 21 a 30 años", "VE para 31 a 40 años", "VE para 41 a 50 años", "VE para 51 a 60 años", "VE para 61 a 70 años", "VE para 71 a 80 años")
+rownames(tabla_VE) <- c("VE ajustado por edad", "VE para 21 a 30 aÃ±os", "VE para 31 a 40 aÃ±os", "VE para 41 a 50 aÃ±os", "VE para 51 a 60 aÃ±os", "VE para 61 a 70 aÃ±os", "VE para 71 a 80 aÃ±os")
 Efectividad <- as.table(tabla_VE)
 Efectividad
+
+# GrÃ¡fico - comparaciÃ³n VE mÃ©todo de tamizaje con otros valores reportados
+
+efectividad_comparada <- data.frame(Fuente = c("MÃ©todo de tamizaje (ajustado por edad)", "Coronovac - Ministerio de Salud (Agosto 2021)", "Coronavac - Jara et al, 2021 (ajustado por sexo y edad)"),
+                                    Desenlace = as.factor(c("UCI", "UCI", "UCI", "Fallecer", "Fallecer", "Fallecer")),
+                                    VE = c(VE_uci, 0.8968, 0.875, VE_def, 0.8638, 0.844),
+                                    lb = c(VE_uci_ic[1], 0.891, 0.857, VE_def_ic[1], 0.8557, 0.823),
+                                    up = c(VE_uci_ic[2], 0.9023, 0.89, VE_def_ic[2], 0.8715, 0.862))
+
+library(ggplot2)
+
+ggplot(efectividad_comparada, aes(x = Fuente, y=VE)) + 
+  geom_errorbar(aes(ymin=lb, ymax=up), width=.1) +
+  geom_point() +
+  coord_flip() +
+  facet_wrap(~ Desenlace)
+ 
