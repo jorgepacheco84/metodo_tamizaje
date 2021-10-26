@@ -1,0 +1,301 @@
+# Cargar base de datos
+library(readxl)
+ejemplo_screening <- read_excel("~/GitHub/metodo_tamizaje/ejemplo_tercera_dosis.xlsx")
+View(ejemplo_screening)
+
+# Crear offset
+ejemplo_screening$o_comp <- with(ejemplo_screening, log(pob_comp / pob_no))
+ejemplo_screening$o_ref <- with(ejemplo_screening, log(pob_ref / pob_no))
+
+#Definir edad y semana como variable categórica
+ejemplo_screening$edad <- as.factor(ejemplo_screening$edad)
+ejemplo_screening$semana <- as.factor(ejemplo_screening$semana)
+
+# Modelo caso con esquema completo estratificado por semana
+m_caso_com <- glm( cbind(casos_comp, casos_no) ~ offset(o_comp) + semana, family=binomial,data=ejemplo_screening)
+summary(m_caso_com)
+VE_caso_com <- (1-exp(as.numeric(m_caso_com[["coefficients"]][["(Intercept)"]])))
+VE_caso_com_ic <- sort(1-exp(confint(m_caso_com, "(Intercept)")))
+
+# Modelo caso con esquema refuerzo estratificado por semana
+m_caso_ref <- glm( cbind(casos_ref, casos_no) ~ offset(o_ref) + semana, family=binomial,data=ejemplo_screening)
+summary(m_caso_ref)
+VE_caso_ref <- (1-exp(as.numeric(m_caso_ref[["coefficients"]][["(Intercept)"]])))
+VE_caso_ref_ic <- sort(1-exp(confint(m_caso_ref, "(Intercept)")))
+
+# Modelo uci con esquema completo estratificado por semana
+m_uci_com <- glm( cbind(uci_comp, uci_no) ~ offset(o_comp) + semana, family=binomial,data=ejemplo_screening)
+summary(m_uci_com)
+VE_uci_com <- (1-exp(as.numeric(m_uci_com[["coefficients"]][["(Intercept)"]])))
+VE_uci_com_ic <- sort(1-exp(confint(m_uci_com, "(Intercept)")))
+
+# Modelo caso con esquema refuerzo estratificado por semana
+m_uci_ref <- glm( cbind(uci_ref, uci_no) ~ offset(o_ref) + semana, family=binomial,data=ejemplo_screening)
+summary(m_uci_ref)
+VE_uci_ref <- (1-exp(as.numeric(m_uci_ref[["coefficients"]][["(Intercept)"]])))
+VE_uci_ref_ic <- sort(1-exp(confint(m_uci_ref, "(Intercept)")))
+
+# Modelo uci con esquema completo estratificado por semana
+m_def_com <- glm( cbind(def_comp, def_no) ~ offset(o_comp) + semana, family=binomial,data=ejemplo_screening)
+summary(m_def_com)
+VE_def_com <- (1-exp(as.numeric(m_def_com[["coefficients"]][["(Intercept)"]])))
+VE_def_com_ic <- sort(1-exp(confint(m_def_com, "(Intercept)")))
+
+# Modelo caso con esquema refuerzo estratificado por semana
+m_def_ref <- glm( cbind(def_ref, def_no) ~ offset(o_ref) + semana, family=binomial,data=ejemplo_screening)
+summary(m_def_ref)
+VE_def_ref <- (1-exp(as.numeric(m_def_ref[["coefficients"]][["(Intercept)"]])))
+VE_def_ref_ic <- sort(1-exp(confint(m_def_ref, "(Intercept)")))
+
+efectividad <- data.frame(Esquema = rep(c("Dos dosis", "Tres dosis"), times = 3),
+                          Desenlace = as.factor(c("Caso", "Caso", "UCI", "UCI", "Fallecer", "Fallecer")),
+                          Efectividad = c(VE_caso_com, VE_caso_ref, VE_uci_com, VE_uci_ref, VE_def_com, VE_def_ref),
+                          lb = c(VE_caso_com_ic[1], VE_caso_ref_ic[1], VE_uci_com_ic[1], VE_uci_ref_ic[1], VE_def_com_ic[1], VE_def_ref_ic[1]),
+                          ub = c(VE_caso_com_ic[2], VE_caso_ref_ic[2], VE_uci_com_ic[2], VE_uci_ref_ic[2], VE_def_com_ic[2], VE_def_ref_ic[2]))
+efectividad$Desenlace <- factor(efectividad$Desenlace, levels = c("Caso", "UCI", "Fallecer")) 
+
+library(ggplot2)
+g.efectividad <- ggplot(efectividad, aes(x = Esquema, y=Efectividad)) + 
+  geom_errorbar(aes(ymin=lb, ymax=ub, color=Esquema), width=.1) +
+  ggtitle ("Efectividad de la vacunación para esquema de dos y tres dosis ") +
+  geom_point(aes(fill=Esquema),size=2, shape=23) +
+  theme(text=element_text(size=20)) +
+  theme(axis.text=element_text(size=20)) +
+  theme(axis.title=element_text(size=20)) +
+  theme(plot.title=element_text(size=20)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(limit = c(0, 1), expand = c(0, 0), breaks = seq(0, 1, by = 0.2), labels = scales::percent) +
+  facet_wrap(~Desenlace)                                    
+
+ggsave(plot = g.efectividad,
+       filename = "/Users/Usuario/Desktop/efectividad ajustada.png",
+       device = "png",
+       dpi = "retina",
+       width = 14, height = 12)
+
+# Comparación de VE entre semanas
+
+ejemplo_screening_sem <- split(ejemplo_screening, ejemplo_screening$semana)
+m_caso_comp_31 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["31"]])
+m_caso_comp_32 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["32"]])
+m_caso_comp_33 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["33"]])
+m_caso_comp_34 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["34"]])
+m_caso_comp_35 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["35"]])
+m_caso_comp_36 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["36"]])
+m_caso_comp_37 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["37"]])
+m_caso_comp_38 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["38"]])
+m_caso_comp_39 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["39"]])
+m_caso_comp_40 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["40"]])
+m_caso_comp_41 <- glm(cbind(casos_comp, casos_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["41"]])
+m_caso_ref_36 <- glm(cbind(casos_ref, casos_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["36"]])
+m_caso_ref_37 <- glm(cbind(casos_ref, casos_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["37"]])
+m_caso_ref_38 <- glm(cbind(casos_ref, casos_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["38"]])
+m_caso_ref_39 <- glm(cbind(casos_ref, casos_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["39"]])
+m_caso_ref_40 <- glm(cbind(casos_ref, casos_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["40"]])
+m_caso_ref_41 <- glm(cbind(casos_ref, casos_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["41"]])
+m_uci_comp_31 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["31"]])
+m_uci_comp_32 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["32"]])
+m_uci_comp_33 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["33"]])
+m_uci_comp_34 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["34"]])
+m_uci_comp_35 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["35"]])
+m_uci_comp_36 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["36"]])
+m_uci_comp_37 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["37"]])
+m_uci_comp_38 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["38"]])
+m_uci_comp_39 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["39"]])
+m_uci_comp_40 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["40"]])
+m_uci_comp_41 <- glm(cbind(uci_comp, uci_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["41"]])
+m_uci_ref_36 <- glm(cbind(uci_ref, uci_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["36"]])
+m_uci_ref_37 <- glm(cbind(uci_ref, uci_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["37"]])
+m_uci_ref_38 <- glm(cbind(uci_ref, uci_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["38"]])
+m_uci_ref_39 <- glm(cbind(uci_ref, uci_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["39"]])
+m_uci_ref_40 <- glm(cbind(uci_ref, uci_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["40"]])
+m_uci_ref_41 <- glm(cbind(uci_ref, uci_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["41"]])
+m_def_comp_31 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["31"]])
+m_def_comp_32 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["32"]])
+m_def_comp_33 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["33"]])
+m_def_comp_34 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["34"]])
+m_def_comp_35 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["35"]])
+m_def_comp_36 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["36"]])
+m_def_comp_37 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["37"]])
+m_def_comp_38 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["38"]])
+m_def_comp_39 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["39"]])
+m_def_comp_40 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["40"]])
+m_def_comp_41 <- glm(cbind(def_comp, def_no) ~ offset(o_comp), family=binomial,data=ejemplo_screening_sem[["41"]])
+m_def_ref_36 <- glm(cbind(def_ref, def_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["36"]])
+m_def_ref_37 <- glm(cbind(def_ref, def_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["37"]])
+m_def_ref_38 <- glm(cbind(def_ref, def_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["38"]])
+m_def_ref_39 <- glm(cbind(def_ref, def_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["39"]])
+m_def_ref_40 <- glm(cbind(def_ref, def_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["40"]])
+m_def_ref_41 <- glm(cbind(def_ref, def_no) ~ offset(o_ref), family=binomial,data=ejemplo_screening_sem[["41"]])
+
+#Estimaciones
+VE_caso_comp_31 <- (1-exp(as.numeric(m_caso_comp_31[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_31_ic <- sort(1-exp(confint(m_caso_comp_31, "(Intercept)")))
+VE_caso_comp_32 <- (1-exp(as.numeric(m_caso_comp_32[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_32_ic <- sort(1-exp(confint(m_caso_comp_32, "(Intercept)")))
+VE_caso_comp_33 <- (1-exp(as.numeric(m_caso_comp_33[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_33_ic <- sort(1-exp(confint(m_caso_comp_33, "(Intercept)")))
+VE_caso_comp_34 <- (1-exp(as.numeric(m_caso_comp_34[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_34_ic <- sort(1-exp(confint(m_caso_comp_34, "(Intercept)")))
+VE_caso_comp_35 <- (1-exp(as.numeric(m_caso_comp_35[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_35_ic <- sort(1-exp(confint(m_caso_comp_35, "(Intercept)")))
+VE_caso_comp_36 <- (1-exp(as.numeric(m_caso_comp_36[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_36_ic <- sort(1-exp(confint(m_caso_comp_36, "(Intercept)")))
+VE_caso_comp_37 <- (1-exp(as.numeric(m_caso_comp_37[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_37_ic <- sort(1-exp(confint(m_caso_comp_37, "(Intercept)")))
+VE_caso_comp_38 <- (1-exp(as.numeric(m_caso_comp_38[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_38_ic <- sort(1-exp(confint(m_caso_comp_38, "(Intercept)")))
+VE_caso_comp_39 <- (1-exp(as.numeric(m_caso_comp_39[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_39_ic <- sort(1-exp(confint(m_caso_comp_39, "(Intercept)")))
+VE_caso_comp_40 <- (1-exp(as.numeric(m_caso_comp_40[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_40_ic <- sort(1-exp(confint(m_caso_comp_40, "(Intercept)")))
+VE_caso_comp_41 <- (1-exp(as.numeric(m_caso_comp_41[["coefficients"]][["(Intercept)"]])))
+VE_caso_comp_41_ic <- sort(1-exp(confint(m_caso_comp_41, "(Intercept)")))
+VE_caso_ref_36 <- (1-exp(as.numeric(m_caso_ref_36[["coefficients"]][["(Intercept)"]])))
+VE_caso_ref_36_ic <- sort(1-exp(confint(m_caso_ref_36, "(Intercept)")))
+VE_caso_ref_37 <- (1-exp(as.numeric(m_caso_ref_37[["coefficients"]][["(Intercept)"]])))
+VE_caso_ref_37_ic <- sort(1-exp(confint(m_caso_ref_37, "(Intercept)")))
+VE_caso_ref_38 <- (1-exp(as.numeric(m_caso_ref_38[["coefficients"]][["(Intercept)"]])))
+VE_caso_ref_38_ic <- sort(1-exp(confint(m_caso_ref_38, "(Intercept)")))
+VE_caso_ref_39 <- (1-exp(as.numeric(m_caso_ref_39[["coefficients"]][["(Intercept)"]])))
+VE_caso_ref_39_ic <- sort(1-exp(confint(m_caso_ref_39, "(Intercept)")))
+VE_caso_ref_40 <- (1-exp(as.numeric(m_caso_ref_40[["coefficients"]][["(Intercept)"]])))
+VE_caso_ref_40_ic <- sort(1-exp(confint(m_caso_ref_40, "(Intercept)")))
+VE_caso_ref_41 <- (1-exp(as.numeric(m_caso_ref_41[["coefficients"]][["(Intercept)"]])))
+VE_caso_ref_41_ic <- sort(1-exp(confint(m_caso_ref_41, "(Intercept)")))
+VE_uci_comp_31 <- (1-exp(as.numeric(m_uci_comp_31[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_31_ic <- sort(1-exp(confint(m_uci_comp_31, "(Intercept)")))
+VE_uci_comp_32 <- (1-exp(as.numeric(m_uci_comp_32[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_32_ic <- sort(1-exp(confint(m_uci_comp_32, "(Intercept)")))
+VE_uci_comp_33 <- (1-exp(as.numeric(m_uci_comp_33[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_33_ic <- sort(1-exp(confint(m_uci_comp_33, "(Intercept)")))
+VE_uci_comp_34 <- (1-exp(as.numeric(m_uci_comp_34[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_34_ic <- sort(1-exp(confint(m_uci_comp_34, "(Intercept)")))
+VE_uci_comp_35 <- (1-exp(as.numeric(m_uci_comp_35[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_35_ic <- sort(1-exp(confint(m_uci_comp_35, "(Intercept)")))
+VE_uci_comp_36 <- (1-exp(as.numeric(m_uci_comp_36[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_36_ic <- sort(1-exp(confint(m_uci_comp_36, "(Intercept)")))
+VE_uci_comp_37 <- (1-exp(as.numeric(m_uci_comp_37[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_37_ic <- sort(1-exp(confint(m_uci_comp_37, "(Intercept)")))
+VE_uci_comp_38 <- (1-exp(as.numeric(m_uci_comp_38[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_38_ic <- sort(1-exp(confint(m_uci_comp_38, "(Intercept)")))
+VE_uci_comp_39 <- (1-exp(as.numeric(m_uci_comp_39[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_39_ic <- sort(1-exp(confint(m_uci_comp_39, "(Intercept)")))
+VE_uci_comp_40 <- (1-exp(as.numeric(m_uci_comp_40[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_40_ic <- sort(1-exp(confint(m_uci_comp_40, "(Intercept)")))
+VE_uci_comp_41 <- (1-exp(as.numeric(m_uci_comp_41[["coefficients"]][["(Intercept)"]])))
+VE_uci_comp_41_ic <- sort(1-exp(confint(m_uci_comp_41, "(Intercept)")))
+VE_uci_ref_36 <- (1-exp(as.numeric(m_uci_ref_36[["coefficients"]][["(Intercept)"]])))
+VE_uci_ref_36_ic <- sort(1-exp(confint(m_uci_ref_36, "(Intercept)")))
+VE_uci_ref_37 <- (1-exp(as.numeric(m_uci_ref_37[["coefficients"]][["(Intercept)"]])))
+VE_uci_ref_37_ic <- sort(1-exp(confint(m_uci_ref_37, "(Intercept)")))
+VE_uci_ref_38 <- (1-exp(as.numeric(m_uci_ref_38[["coefficients"]][["(Intercept)"]])))
+VE_uci_ref_38_ic <- sort(1-exp(confint(m_uci_ref_38, "(Intercept)")))
+VE_uci_ref_39 <- (1-exp(as.numeric(m_uci_ref_39[["coefficients"]][["(Intercept)"]])))
+VE_uci_ref_39_ic <- sort(1-exp(confint(m_uci_ref_39, "(Intercept)")))
+VE_uci_ref_40 <- (1-exp(as.numeric(m_uci_ref_40[["coefficients"]][["(Intercept)"]])))
+VE_uci_ref_40_ic <- sort(1-exp(confint(m_uci_ref_40, "(Intercept)")))
+VE_uci_ref_41 <- (1-exp(as.numeric(m_uci_ref_41[["coefficients"]][["(Intercept)"]])))
+VE_uci_ref_41_ic <- sort(1-exp(confint(m_uci_ref_41, "(Intercept)")))
+VE_def_comp_31 <- (1-exp(as.numeric(m_def_comp_31[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_31_ic <- sort(1-exp(confint(m_def_comp_31, "(Intercept)")))
+VE_def_comp_32 <- (1-exp(as.numeric(m_def_comp_32[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_32_ic <- sort(1-exp(confint(m_def_comp_32, "(Intercept)")))
+VE_def_comp_33 <- (1-exp(as.numeric(m_def_comp_33[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_33_ic <- sort(1-exp(confint(m_def_comp_33, "(Intercept)")))
+VE_def_comp_34 <- (1-exp(as.numeric(m_def_comp_34[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_34_ic <- sort(1-exp(confint(m_def_comp_34, "(Intercept)")))
+VE_def_comp_35 <- (1-exp(as.numeric(m_def_comp_35[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_35_ic <- sort(1-exp(confint(m_def_comp_35, "(Intercept)")))
+VE_def_comp_36 <- (1-exp(as.numeric(m_def_comp_36[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_36_ic <- sort(1-exp(confint(m_def_comp_36, "(Intercept)")))
+VE_def_comp_37 <- (1-exp(as.numeric(m_def_comp_37[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_37_ic <- sort(1-exp(confint(m_def_comp_37, "(Intercept)")))
+VE_def_comp_38 <- (1-exp(as.numeric(m_def_comp_38[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_38_ic <- sort(1-exp(confint(m_def_comp_38, "(Intercept)")))
+VE_def_comp_39 <- (1-exp(as.numeric(m_def_comp_39[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_39_ic <- sort(1-exp(confint(m_def_comp_39, "(Intercept)")))
+VE_def_comp_40 <- (1-exp(as.numeric(m_def_comp_40[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_40_ic <- sort(1-exp(confint(m_def_comp_40, "(Intercept)")))
+VE_def_comp_41 <- (1-exp(as.numeric(m_def_comp_41[["coefficients"]][["(Intercept)"]])))
+VE_def_comp_41_ic <- sort(1-exp(confint(m_def_comp_41, "(Intercept)")))
+VE_def_ref_36 <- (1-exp(as.numeric(m_def_ref_36[["coefficients"]][["(Intercept)"]])))
+VE_def_ref_36_ic <- sort(1-exp(confint(m_def_ref_36, "(Intercept)")))
+VE_def_ref_37 <- (1-exp(as.numeric(m_def_ref_37[["coefficients"]][["(Intercept)"]])))
+VE_def_ref_37_ic <- sort(1-exp(confint(m_def_ref_37, "(Intercept)")))
+VE_def_ref_38 <- (1-exp(as.numeric(m_def_ref_38[["coefficients"]][["(Intercept)"]])))
+VE_def_ref_38_ic <- sort(1-exp(confint(m_def_ref_38, "(Intercept)")))
+VE_def_ref_39 <- (1-exp(as.numeric(m_def_ref_39[["coefficients"]][["(Intercept)"]])))
+VE_def_ref_39_ic <- sort(1-exp(confint(m_def_ref_39, "(Intercept)")))
+VE_def_ref_40 <- (1-exp(as.numeric(m_def_ref_40[["coefficients"]][["(Intercept)"]])))
+VE_def_ref_40_ic <- sort(1-exp(confint(m_def_ref_40, "(Intercept)")))
+VE_def_ref_41 <- (1-exp(as.numeric(m_def_ref_41[["coefficients"]][["(Intercept)"]])))
+VE_def_ref_41_ic <- sort(1-exp(confint(m_def_ref_41, "(Intercept)")))
+
+efectividad_semana_caso <- data.frame(semana = rep(c("31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41"), each = 2),
+                                 Esquema = rep(c("Dos dosis", "Tres dosis"), times = 11),
+                                 VE = c(VE_caso_comp_31, NA, VE_caso_comp_32, NA, VE_caso_comp_33, NA, VE_caso_comp_34, NA, VE_caso_comp_35, NA, VE_caso_comp_36, VE_caso_ref_36, VE_caso_comp_37, VE_caso_ref_37, VE_caso_comp_38, VE_caso_ref_38, VE_caso_comp_39, VE_caso_ref_39,  VE_caso_comp_40, VE_caso_ref_40, VE_caso_comp_41, VE_caso_ref_41),
+                                 lb = c(VE_caso_comp_31_ic[1], NA, VE_caso_comp_32_ic[1], NA, VE_caso_comp_33_ic[1], NA, VE_caso_comp_34_ic[1], NA, VE_caso_comp_35_ic[1], NA, VE_caso_comp_36_ic[1], VE_caso_ref_36_ic[1], VE_caso_comp_37_ic[1], VE_caso_ref_37_ic[1], VE_caso_comp_38_ic[1], VE_caso_ref_38_ic[1], VE_caso_comp_39_ic[1], VE_caso_ref_39_ic[1], VE_caso_comp_40_ic[1], VE_caso_ref_40_ic[1], VE_caso_comp_41_ic[1], VE_caso_ref_41_ic[1]),
+                                 ub = c(VE_caso_comp_31_ic[2], NA, VE_caso_comp_32_ic[2], NA, VE_caso_comp_33_ic[2], NA, VE_caso_comp_34_ic[2], NA, VE_caso_comp_35_ic[2], NA, VE_caso_comp_36_ic[2], VE_caso_ref_36_ic[2], VE_caso_comp_37_ic[2], VE_caso_ref_37_ic[2], VE_caso_comp_38_ic[2], VE_caso_ref_38_ic[2], VE_caso_comp_39_ic[2], VE_caso_ref_39_ic[2], VE_caso_comp_40_ic[2], VE_caso_ref_40_ic[2], VE_caso_comp_41_ic[2], VE_caso_ref_41_ic[2]))
+
+efectividad_semana_uci <- data.frame(semana = rep(c("31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41"), each = 2),
+                                      Esquema = rep(c("Dos dosis", "Tres dosis"), times = 11),
+                                      VE = c(VE_uci_comp_31, NA, VE_uci_comp_32, NA, VE_uci_comp_33, NA, VE_uci_comp_34, NA, VE_uci_comp_35, NA, VE_uci_comp_36, VE_uci_ref_36, VE_uci_comp_37, VE_uci_ref_37, VE_uci_comp_38, VE_uci_ref_38, VE_uci_comp_39, VE_uci_ref_39,  VE_uci_comp_40, VE_uci_ref_40, VE_uci_comp_41, VE_uci_ref_41),
+                                      lb = c(VE_uci_comp_31_ic[1], NA, VE_uci_comp_32_ic[1], NA, VE_uci_comp_33_ic[1], NA, VE_uci_comp_34_ic[1], NA, VE_uci_comp_35_ic[1], NA, VE_uci_comp_36_ic[1], VE_uci_ref_36_ic[1], VE_uci_comp_37_ic[1], VE_uci_ref_37_ic[1], VE_uci_comp_38_ic[1], VE_uci_ref_38_ic[1], VE_uci_comp_39_ic[1], VE_uci_ref_39_ic[1], VE_uci_comp_40_ic[1], VE_uci_ref_40_ic[1], VE_uci_comp_41_ic[1], VE_uci_ref_41_ic[1]),
+                                      ub = c(VE_uci_comp_31_ic[2], NA, VE_uci_comp_32_ic[2], NA, VE_uci_comp_33_ic[2], NA, VE_uci_comp_34_ic[2], NA, VE_uci_comp_35_ic[2], NA, VE_uci_comp_36_ic[2], VE_uci_ref_36_ic[2], VE_uci_comp_37_ic[2], VE_uci_ref_37_ic[2], VE_uci_comp_38_ic[2], VE_uci_ref_38_ic[2], VE_uci_comp_39_ic[2], VE_uci_ref_39_ic[2], VE_uci_comp_40_ic[2], VE_uci_ref_40_ic[2], VE_uci_comp_41_ic[2], VE_uci_ref_41_ic[2]))
+
+efectividad_semana_def <- data.frame(semana = rep(c("31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41"), each = 2),
+                                     Esquema = rep(c("Dos dosis", "Tres dosis"), times = 11),
+                                     VE = c(VE_def_comp_31, NA, VE_def_comp_32, NA, VE_def_comp_33, NA, VE_def_comp_34, NA, VE_def_comp_35, NA, VE_def_comp_36, VE_def_ref_36, VE_def_comp_37, VE_def_ref_37, VE_def_comp_38, VE_def_ref_38, NA, VE_def_ref_39,  VE_def_comp_40, VE_def_ref_40, VE_def_comp_41, VE_def_ref_41),
+                                     lb = c(VE_def_comp_31_ic[1], NA, VE_def_comp_32_ic[1], NA, VE_def_comp_33_ic[1], NA, VE_def_comp_34_ic[1], NA, VE_def_comp_35_ic[1], NA, VE_def_comp_36_ic[1], VE_def_ref_36_ic[1], VE_def_comp_37_ic[1], VE_def_ref_37_ic[1], VE_def_comp_38_ic[1], VE_def_ref_38_ic[1], NA, VE_def_ref_39_ic[1], VE_def_comp_40_ic[1], VE_def_ref_40_ic[1], VE_def_comp_41_ic[1], VE_def_ref_41_ic[1]),
+                                     ub = c(VE_def_comp_31_ic[2], NA, VE_def_comp_32_ic[2], NA, VE_def_comp_33_ic[2], NA, VE_def_comp_34_ic[2], NA, VE_def_comp_35_ic[2], NA, VE_def_comp_36_ic[2], VE_def_ref_36_ic[2], VE_def_comp_37_ic[2], VE_def_ref_37_ic[2], VE_def_comp_38_ic[2], VE_def_ref_38_ic[2], NA, VE_def_ref_39_ic[2], VE_def_comp_40_ic[2], VE_def_ref_40_ic[2], VE_def_comp_41_ic[2], VE_def_ref_41_ic[2]))
+
+ggplot(efectividad_semana_caso, aes(x = semana, y=VE, colour = Esquema)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin=lb, ymax=ub), width=.1) +
+  ggtitle ("VE para caso ajustada por edad estimada por método de tamizaje para cada semana") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme_bw() +
+  scale_y_continuous(limit = c(0, 1), expand = c(0, 0), breaks = seq(0, 1, by = 0.2))
+
+ggplot(efectividad_semana_uci, aes(x = semana, y=VE, colour = Esquema)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin=lb, ymax=ub), width=.1) +
+  ggtitle ("VE para UCI ajustada por edad estimada por método de tamizaje para cada semana") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme_bw() +
+  scale_y_continuous(limit = c(0, 1), expand = c(0, 0), breaks = seq(0, 1, by = 0.2))
+
+ggplot(efectividad_semana_def, aes(x = semana, y=VE, colour = Esquema)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin=lb, ymax=ub), width=.1) +
+  ggtitle ("VE para fallecer ajustada por edad estimada por método de tamizaje para cada semana") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme_bw() +
+  scale_y_continuous(limit = c(0, 1), expand = c(0, 0), breaks = seq(0, 1, by = 0.2))
+
+efectividad_semana <- data.frame(semana = rep(c("31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41"), each = 6),
+                                 Esquema = rep(c("Dos dosis", "Tres dosis"), times = 33),
+                                 Desenlace = rep(c(rep(c("Caso", "UCI", "Fallecer"), each =2)), times = 11),
+                                 Efectividad = c(VE_caso_comp_31, NA, VE_uci_comp_31, NA, VE_def_comp_31, NA, VE_caso_comp_32, NA, VE_uci_comp_32, NA, VE_def_comp_32, NA, VE_caso_comp_33, NA, VE_uci_comp_33, NA, VE_def_comp_33, NA, VE_caso_comp_34, NA, VE_uci_comp_34, NA, VE_def_comp_34, NA, VE_caso_comp_35, NA, VE_uci_comp_35, NA, VE_def_comp_35, NA, VE_caso_comp_36, VE_caso_ref_36, VE_uci_comp_36, VE_uci_ref_36, VE_def_comp_36, VE_def_ref_36, VE_caso_comp_37, VE_caso_ref_37, VE_uci_comp_37, VE_uci_ref_37, VE_def_comp_37, VE_def_ref_37, VE_caso_comp_38, VE_caso_ref_38, VE_uci_comp_38, VE_uci_ref_38, VE_def_comp_38, VE_def_ref_38, VE_caso_comp_39, VE_caso_ref_39, VE_uci_comp_39, VE_uci_ref_39, NA, VE_def_ref_39, VE_caso_comp_40, VE_caso_ref_40, VE_uci_comp_40, VE_uci_ref_40, VE_def_comp_40, VE_def_ref_40, VE_caso_comp_41, VE_caso_ref_41, VE_uci_comp_41, VE_uci_ref_41, VE_def_comp_41, VE_def_ref_41),
+                                 lb = c(VE_caso_comp_31_ic[1], NA, VE_uci_comp_31_ic[1], NA, VE_def_comp_31_ic[1], NA, VE_caso_comp_32_ic[1], NA, VE_uci_comp_32_ic[1], NA, VE_def_comp_32_ic[1], NA, VE_caso_comp_33_ic[1], NA, VE_uci_comp_33_ic[1], NA, VE_def_comp_33_ic[1], NA, VE_caso_comp_34_ic[1], NA, VE_uci_comp_34_ic[1], NA, VE_def_comp_34_ic[1], NA, VE_caso_comp_35_ic[1], NA, VE_uci_comp_35_ic[1], NA, VE_def_comp_35_ic[1], NA, VE_caso_comp_36_ic[1], VE_caso_ref_36_ic[1], VE_uci_comp_36_ic[1], VE_uci_ref_36_ic[1], VE_def_comp_36_ic[1], VE_def_ref_36_ic[1], VE_caso_comp_37_ic[1], VE_caso_ref_37_ic[1], VE_uci_comp_37_ic[1], VE_uci_ref_37_ic[1], VE_def_comp_37_ic[1], VE_def_ref_37_ic[1], VE_caso_comp_38_ic[1], VE_caso_ref_38_ic[1], VE_uci_comp_38_ic[1], VE_uci_ref_38_ic[1], VE_def_comp_38_ic[1], VE_def_ref_38_ic[1], VE_caso_comp_39_ic[1], VE_caso_ref_39_ic[1], VE_uci_comp_39_ic[1], VE_uci_ref_39_ic[1], NA, VE_def_ref_39_ic[1], VE_caso_comp_40_ic[1], VE_caso_ref_40_ic[1], VE_uci_comp_40_ic[1], VE_uci_ref_40_ic[1], VE_def_comp_40_ic[1], VE_def_ref_40_ic[1], VE_caso_comp_41_ic[1], VE_caso_ref_41_ic[1], VE_uci_comp_41_ic[1], VE_uci_ref_41_ic[1], VE_def_comp_41_ic[1], VE_def_ref_41_ic[1]),
+                                 ub = c(VE_caso_comp_31_ic[2], NA, VE_uci_comp_31_ic[2], NA, VE_def_comp_31_ic[2], NA, VE_caso_comp_32_ic[2], NA, VE_uci_comp_32_ic[2], NA, VE_def_comp_32_ic[2], NA, VE_caso_comp_33_ic[2], NA, VE_uci_comp_33_ic[2], NA, VE_def_comp_33_ic[2], NA, VE_caso_comp_34_ic[2], NA, VE_uci_comp_34_ic[2], NA, VE_def_comp_34_ic[2], NA, VE_caso_comp_35_ic[2], NA, VE_uci_comp_35_ic[2], NA, VE_def_comp_35_ic[2], NA, VE_caso_comp_36_ic[2], VE_caso_ref_36_ic[2], VE_uci_comp_36_ic[2], VE_uci_ref_36_ic[2], VE_def_comp_36_ic[2], VE_def_ref_36_ic[2], VE_caso_comp_37_ic[2], VE_caso_ref_37_ic[2], VE_uci_comp_37_ic[2], VE_uci_ref_37_ic[2], VE_def_comp_37_ic[2], VE_def_ref_37_ic[2], VE_caso_comp_38_ic[2], VE_caso_ref_38_ic[2], VE_uci_comp_38_ic[2], VE_uci_ref_38_ic[2], VE_def_comp_38_ic[2], VE_def_ref_38_ic[2], VE_caso_comp_39_ic[2], VE_caso_ref_39_ic[2], VE_uci_comp_39_ic[2], VE_uci_ref_39_ic[2], NA, VE_def_ref_39_ic[2], VE_caso_comp_40_ic[2], VE_caso_ref_40_ic[2], VE_uci_comp_40_ic[2], VE_uci_ref_40_ic[2], VE_def_comp_40_ic[2], VE_def_ref_40_ic[2], VE_caso_comp_41_ic[2], VE_caso_ref_41_ic[2], VE_uci_comp_41_ic[2], VE_uci_ref_41_ic[2], VE_def_comp_41_ic[2], VE_def_ref_41_ic[2]))
+efectividad_semana$Desenlace <- factor(efectividad_semana$Desenlace, levels = c("Caso", "UCI", "Fallecer")) 
+
+efectividad_semana <- ggplot(efectividad_semana, aes(x = semana, y=Efectividad, colour = Esquema)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin=lb, ymax=ub), width=.1) +
+  ggtitle ("Efectividad ajustada por edad estimada por método de tamizaje para cada semana") +
+  theme(text=element_text(size=20)) +
+  theme(axis.text=element_text(size=20)) +
+  theme(axis.title=element_text(size=20)) +
+  theme(plot.title=element_text(size=20)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(limit = c(0, 1), expand = c(0, 0), breaks = seq(0, 1, by = 0.2), labels = scales::percent) +
+  facet_wrap(~Desenlace, ncol = 1) 
+
+ggsave(plot = efectividad_semana,
+       filename = "/Users/Usuario/Desktop/efectividad.png",
+       device = "png",
+       dpi = "retina",
+       width = 14, height = 12)
